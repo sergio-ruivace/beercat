@@ -5,6 +5,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 public @Data @AllArgsConstructor @NoArgsConstructor class Beer {
+	private Long id;
 	private String name;
 	private String description;
 	private Float graduation;

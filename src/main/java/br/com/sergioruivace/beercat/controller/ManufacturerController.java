@@ -15,48 +15,42 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.util.UriComponentsBuilder;
 
-import br.com.sergioruivace.beercat.model.Beer;
-import br.com.sergioruivace.beercat.model.BeerType;
 import br.com.sergioruivace.beercat.model.Manufacturer;
 
 @RestController
-@RequestMapping("/beers")
-public class BeerController {
+@RequestMapping("/manufacturers")
+public class ManufacturerController {
 
 	@GetMapping
-	public ResponseEntity<List<Beer>> list() {
+	public ResponseEntity<List<Manufacturer>> list() {
 		Manufacturer manufacturer = new Manufacturer(1l, "Ambev", "Brazil");
-		Beer beer = new Beer(1l, "name", "description", 4.5F, BeerType.IPA, manufacturer);		
-		List<Beer> list = Arrays.asList(beer, beer, beer);	
+		List<Manufacturer> list = Arrays.asList(manufacturer, manufacturer, manufacturer);	
 		
 		return ResponseEntity.ok(list);			
 	}
 		
 	
 	@PostMapping
-	public ResponseEntity<Beer> create(@RequestBody Beer form, UriComponentsBuilder uriBuilder) {
-		form.setId(1l);
-		
-		URI uri = uriBuilder.path("/beers/{id}").buildAndExpand(form.getId()).toUri();
+	public ResponseEntity<Manufacturer> create(@RequestBody Manufacturer form, UriComponentsBuilder uriBuilder) {
+		form.setId(1l);		
+		URI uri = uriBuilder.path("/manufacturers/{id}").buildAndExpand(form.getId()).toUri();
 		return ResponseEntity.created(uri).body(form);	
 		
 	}
 	
 	@GetMapping("/{id}")
-	public ResponseEntity<Beer> detail(@PathVariable Long id) {
+	public ResponseEntity<Manufacturer> detail(@PathVariable Long id) {
 		Manufacturer manufacturer = new Manufacturer(1l, "Ambev", "Brazil");
-		Beer beer = new Beer(1l, "name", "description", 4.5F, BeerType.IPA, manufacturer);
 		
-		return ResponseEntity.ok(beer);	
+		return ResponseEntity.ok(manufacturer);	
 		
 	}
 	
 	@PutMapping("/{id}")
-	public ResponseEntity<Beer> update(@PathVariable Long id, @RequestBody Beer form) {
+	public ResponseEntity<Manufacturer> update(@PathVariable Long id, @RequestBody Manufacturer form) {
 		Manufacturer manufacturer = new Manufacturer(1l, "Ambev", "Brazil");
-		Beer beer = new Beer(1l, "name", "description", 4.5F, BeerType.IPA, manufacturer);
 		
-		return ResponseEntity.ok(beer);	
+		return ResponseEntity.ok(manufacturer);	
 		
 	}
 	

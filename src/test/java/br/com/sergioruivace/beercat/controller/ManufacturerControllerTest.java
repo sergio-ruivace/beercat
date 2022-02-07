@@ -20,13 +20,11 @@ import org.springframework.test.web.servlet.RequestBuilder;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import br.com.sergioruivace.beercat.model.Beer;
-import br.com.sergioruivace.beercat.model.BeerType;
 import br.com.sergioruivace.beercat.model.Manufacturer;
 
-@WebMvcTest(BeerController.class)
+@WebMvcTest(ManufacturerController.class)
 @AutoConfigureMockMvc
-public class BeerControllerTest {
+public class ManufacturerControllerTest {
 	
 	@Autowired
     private MockMvc mvc;
@@ -36,29 +34,27 @@ public class BeerControllerTest {
 
 	@Test
 	void list() throws Exception {
-		RequestBuilder request = get("/beers")
+		RequestBuilder request = get("/manufacturers")
 				.contentType(MediaType.APPLICATION_JSON);
 		
 		mvc.perform(request)
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$", hasSize(3)))
-            .andExpect(jsonPath("$[0].name", is("name")));    
+            .andExpect(jsonPath("$[0].name", is("Ambev")));    
         
 	}
 	
 	@Test
 	void create() throws Exception {
 		Manufacturer manufacturer = new Manufacturer(null, "Ambev", "Brazil");
-		Beer beer = new Beer(null, "name", "description", 4.5F, BeerType.IPA, manufacturer);
 		
-		RequestBuilder request = post("/beers")
+		RequestBuilder request = post("/manufacturers")
 				.contentType(MediaType.APPLICATION_JSON)
-				.content(mapper.writeValueAsString(beer));
+				.content(mapper.writeValueAsString(manufacturer));
 		
 		mvc.perform(request)			
 			.andExpect(status().isCreated())
-			.andExpect(jsonPath("$.name", is(beer.getName())))
-			.andExpect(jsonPath("$.manufacturer.name", is(manufacturer.getName())));  
+			.andExpect(jsonPath("$.name", is(manufacturer.getName())));  
 
         
 	}
@@ -66,39 +62,35 @@ public class BeerControllerTest {
 	@Test
 	void detail() throws Exception {
 		Manufacturer manufacturer = new Manufacturer(1l, "Ambev", "Brazil");
-		Beer beer = new Beer(1l, "name", "description", 4.5F, BeerType.IPA, manufacturer);
 		
-		RequestBuilder request = get("/beers/" + beer.getId())
+		RequestBuilder request = get("/manufacturers/" + manufacturer.getId())
 				.contentType(MediaType.APPLICATION_JSON);
 		
 		mvc.perform(request)
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.name", is(beer.getName())))
-			.andExpect(jsonPath("$.manufacturer.name", is(manufacturer.getName())));  
+			.andExpect(jsonPath("$.name", is(manufacturer.getName())));  
         
 	}
 	
 	@Test
 	void update() throws Exception {
 		Manufacturer manufacturer = new Manufacturer(1l, "Ambev", "Brazil");
-		Beer beer = new Beer(1l, "name", "description", 4.5F, BeerType.IPA, null);
 		
-		RequestBuilder request = put("/beers/" + beer.getId())
+		RequestBuilder request = put("/manufacturers/" + manufacturer.getId())
 				.contentType(MediaType.APPLICATION_JSON)
-				.content(mapper.writeValueAsString(beer));
+				.content(mapper.writeValueAsString(manufacturer));
 		
 		mvc.perform(request)
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.name", is(beer.getName())))
-			.andExpect(jsonPath("$.manufacturer.name", is(manufacturer.getName())));  
+			.andExpect(jsonPath("$.name", is(manufacturer.getName())));  
         
 	}
 	
 	@Test
 	void remove() throws Exception {
-		Beer beer = new Beer(1l, "name", "description", 4.5F, BeerType.IPA, null);
+		Manufacturer manufacturer = new Manufacturer(1l, "Ambev", "Brazil");
 		
-		RequestBuilder request = delete("/beers/" + beer.getId())
+		RequestBuilder request = delete("/manufacturers/" + manufacturer.getId())
 				.contentType(MediaType.APPLICATION_JSON);
 		
 		mvc.perform(request)
