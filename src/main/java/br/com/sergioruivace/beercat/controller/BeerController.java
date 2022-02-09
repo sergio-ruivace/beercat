@@ -1,10 +1,13 @@
 package br.com.sergioruivace.beercat.controller;
 
 import java.net.URI;
-import java.util.List;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort.Direction;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -13,6 +16,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -20,9 +24,12 @@ import br.com.sergioruivace.beercat.model.Beer;
 import br.com.sergioruivace.beercat.model.Manufacturer;
 import br.com.sergioruivace.beercat.repository.BeerRepository;
 import br.com.sergioruivace.beercat.repository.ManufacturerRepository;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 @RestController
 @RequestMapping("/beers")
+@Tag(name = "Beer", description = "The beer API")
 public class BeerController {
 	
 	@Autowired
@@ -32,10 +39,22 @@ public class BeerController {
 	private ManufacturerRepository manufacturerRepository;
 
 	@GetMapping
-	public ResponseEntity<List<Beer>> list() {					
-		List<Beer> list = repository.findAll();	
+	@Operation(description = "This API will return a beer page. The sortDirection need to be ASC or DESC, sortField need to be a field from beer")
+	public ResponseEntity<Page<Beer>> list(@RequestParam(defaultValue = "0") int page, 
+			@RequestParam(defaultValue = "10") int size, 
+			@RequestParam(defaultValue = "name") String sortField, 
+			@RequestParam(defaultValue = "asc") String sortDirection) {
 		
-		return ResponseEntity.ok(list);			
+		try {
+			Direction direction = Direction.fromString(sortDirection);
+			
+			Pageable pageable = PageRequest.of(page, size, direction, sortField);
+			Page<Beer> list = repository.findAll(pageable);	
+			
+			return ResponseEntity.ok(list);	
+		} catch (Exception e) {
+			return ResponseEntity.badRequest().build();
+		} 	
 	}
 		
 	

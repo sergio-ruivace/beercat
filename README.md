@@ -9,7 +9,7 @@ Command to build project/image
 
 	mvnw spring-boot:build-image -Dspring-boot.build-image.imageName=beercat/latest -Dexcludedevtools=true
 
-Command to build project/image remote dev
+Command to build project/image remote development
 
 	mvnw spring-boot:build-image -Dspring-boot.build-image.imageName=beercat/latest -Dexcludedevtools=false
 
@@ -36,6 +36,7 @@ Integration tests are interesting because their coverage is high. But their deve
 6)The h2 is used as memory database. It is light, easy to use and simplifies the development.
 7)If the beer types changes a lot, it is better use a database table. This approach will give some flexibility. But I chose an enum to simplify the development and I think that is difficult to create new type of beer.
 8)In this project, I used the spring-boot to build the docker image. It can be accomplished also with dockerfile.
+
 
 ### Reference Documentation
 For further reference, please consider the following sections:

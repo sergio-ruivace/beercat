@@ -1,8 +1,8 @@
 package br.com.sergioruivace.beercat.controller;
 
-
-import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.is;
+import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -20,6 +20,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.mapping.PropertyReferenceException;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.RequestBuilder;
@@ -47,6 +51,12 @@ public class BeerControllerTest {
 	
 	@MockBean
 	private ManufacturerRepository manufacturerRepository;
+	
+	@MockBean
+	private PropertyReferenceException propertyException;
+	
+	@MockBean
+	private IllegalArgumentException argumentException;
 
 
 	@Test
@@ -54,16 +64,41 @@ public class BeerControllerTest {
 		Manufacturer manufacturer = new Manufacturer(1l, "Heineken", "Netherlands");
 		Beer beer = new Beer(1l, "Heineken", "Heineken Lager Beer", 5F, BeerType.PALE_LAGER, manufacturer);		
 		List<Beer> list = Arrays.asList(beer, beer, beer);
+		Page<Beer> page = new PageImpl<Beer>(list);
 		
-		when(repository.findAll()).thenReturn(list);		
+		when(repository.findAll(isA(Pageable.class))).thenReturn(page);
 		
 		RequestBuilder request = get("/beers")
 				.contentType(MediaType.APPLICATION_JSON);
 		
 		mvc.perform(request)
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$", hasSize(3)))
-            .andExpect(jsonPath("$[0].name", is(beer.getName())));    
+			.andExpect(jsonPath("$.content", hasSize(3)))
+            .andExpect(jsonPath("$.content[0].name", is(beer.getName())));    
+        
+	}
+	
+	@Test
+	void list_wrongField() throws Exception {
+		when(repository.findAll(isA(Pageable.class))).thenThrow(propertyException);		
+
+		RequestBuilder request = get("/beers").param("sortField", "xxxx")
+				.contentType(MediaType.APPLICATION_JSON);
+		
+		mvc.perform(request)
+			.andExpect(status().is4xxClientError());    
+        
+	}
+	
+	@Test
+	void list_wrongDirection() throws Exception {
+		when(repository.findAll(isA(Pageable.class))).thenThrow(argumentException);		
+
+		RequestBuilder request = get("/beers").param("sortDirection", "xxxx")
+				.contentType(MediaType.APPLICATION_JSON);
+		
+		mvc.perform(request)
+			.andExpect(status().is4xxClientError());    
         
 	}
 	

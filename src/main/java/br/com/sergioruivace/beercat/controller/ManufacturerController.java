@@ -1,10 +1,13 @@
 package br.com.sergioruivace.beercat.controller;
 
 import java.net.URI;
-import java.util.List;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort.Direction;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -13,24 +16,40 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import br.com.sergioruivace.beercat.model.Manufacturer;
 import br.com.sergioruivace.beercat.repository.ManufacturerRepository;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 @RestController
 @RequestMapping("/manufacturers")
+@Tag(name = "Manufacturer", description = "The manufacturer API")
 public class ManufacturerController {
 
 	@Autowired
 	private ManufacturerRepository repository;
 	
 	@GetMapping
-	public ResponseEntity<List<Manufacturer>> list() {
-		List<Manufacturer> list = repository.findAll();
-		
-		return ResponseEntity.ok(list);			
+	@Operation(description = "This API will return a manufacturer page. The sortDirection need to be ASC or DESC, sortField need to be a field from manufacturer")
+	public ResponseEntity<Page<Manufacturer>> list(@RequestParam(defaultValue = "0") int page, 
+			@RequestParam(defaultValue = "10") int size, 
+			@RequestParam(defaultValue = "name") String sortField, 
+			@RequestParam(defaultValue = "asc") String sortDirection) {
+		try {
+			Direction direction = Direction.fromString(sortDirection);
+			
+			Pageable pageable = PageRequest.of(page, size, direction, sortField);
+			Page<Manufacturer> list = repository.findAll(pageable);
+			
+			return ResponseEntity.ok(list);	
+		} catch (Exception e) {
+			return ResponseEntity.badRequest().build();
+		} 	
+	
 	}
 		
 	
