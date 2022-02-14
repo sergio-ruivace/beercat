@@ -12,8 +12,8 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-@Entity
-public @Data @AllArgsConstructor @NoArgsConstructor class Beer {
+@Entity @Data @AllArgsConstructor @NoArgsConstructor
+public class Beer {
 	
 	@Id @GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
@@ -26,16 +26,20 @@ public @Data @AllArgsConstructor @NoArgsConstructor class Beer {
 	
 	@ManyToOne
 	private Manufacturer manufacturer;
+	
+	private String pictureUrl;
 
 	public void update(Beer form, Manufacturer newManufacturer) {
 		this.description = form.description;
 		this.graduation = form.graduation;
 		this.name = form.name;
-		this.type = form.type;	
+		this.type = form.type;
+		this.pictureUrl = form.getPictureUrl();
 		
 		if (newManufacturer != null) {
 			this.manufacturer = newManufacturer;
 		}			
+		
 	}
 
 }

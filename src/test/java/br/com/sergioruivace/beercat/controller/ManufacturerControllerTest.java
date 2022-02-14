@@ -1,10 +1,7 @@
 package br.com.sergioruivace.beercat.controller;
 
-
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.Matchers.hasSize;
-import static org.mockito.ArgumentMatchers.isA;
-import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -12,30 +9,25 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import java.util.Arrays;
-import java.util.List;
-import java.util.Optional;
-
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.mapping.PropertyReferenceException;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.security.test.context.support.WithUserDetails;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.RequestBuilder;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import br.com.sergioruivace.beercat.BeercatApplication;
 import br.com.sergioruivace.beercat.model.Manufacturer;
 import br.com.sergioruivace.beercat.repository.ManufacturerRepository;
 
-@WebMvcTest(ManufacturerController.class)
+@SpringBootTest(classes = BeercatApplication.class)
 @AutoConfigureMockMvc
+@TestPropertySource(locations = "classpath:test.properties")
 public class ManufacturerControllerTest {
 	
 	@Autowired
@@ -44,38 +36,24 @@ public class ManufacturerControllerTest {
 	@Autowired
     private ObjectMapper mapper;
 	
-	@MockBean
-	private ManufacturerRepository repository;
-	
-	@MockBean
-	private PropertyReferenceException propertyException;
-	
-	@MockBean
-	private IllegalArgumentException argumentException;
+	@Autowired
+	private ManufacturerRepository repository;	
 	
 	@Test
-	void list() throws Exception {
-		Manufacturer manufacturer = new Manufacturer(1l, "Heineken", "Netherlands");
-		List<Manufacturer> list = Arrays.asList(manufacturer, manufacturer);
-		
-		Page<Manufacturer> page = new PageImpl<Manufacturer>(list);
-		
-		when(repository.findAll(isA(Pageable.class))).thenReturn(page);
-		
+	void list() throws Exception {	
 		RequestBuilder request = get("/manufacturers")
 				.contentType(MediaType.APPLICATION_JSON);
 		
+		int dataCount = repository.findAll().size();
+		
 		mvc.perform(request)
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.content", hasSize(2)))
-            .andExpect(jsonPath("$.content[0].name", is(manufacturer.getName())));    
+			.andExpect(jsonPath("$.content", hasSize(dataCount)));		
         
 	}
 	
 	@Test
 	void list_wrongField() throws Exception {
-		when(repository.findAll(isA(Pageable.class))).thenThrow(propertyException);		
-
 		RequestBuilder request = get("/manufacturers").param("sortField", "xxxx")
 				.contentType(MediaType.APPLICATION_JSON);
 		
@@ -86,8 +64,6 @@ public class ManufacturerControllerTest {
 	
 	@Test
 	void list_wrongDirection() throws Exception {
-		when(repository.findAll(isA(Pageable.class))).thenThrow(argumentException);		
-
 		RequestBuilder request = get("/manufacturers").param("sortDirection", "xxxx")
 				.contentType(MediaType.APPLICATION_JSON);
 		
@@ -96,11 +72,9 @@ public class ManufacturerControllerTest {
         
 	}
 	
-	@Test
+	@Test  @WithUserDetails("user@beercat.com")
 	void create() throws Exception {
-		Manufacturer manufacturer = new Manufacturer(1l, "Ambev", "Brazil");
-		
-		when(repository.save(manufacturer)).thenReturn(manufacturer);	
+		Manufacturer manufacturer = new Manufacturer(null, "Ambev", "Brazil");
 		
 		RequestBuilder request = post("/manufacturers")
 				.contentType(MediaType.APPLICATION_JSON)
@@ -113,27 +87,20 @@ public class ManufacturerControllerTest {
         
 	}
 	
-	@Test
+	@Test @WithUserDetails("user@heineken.com")
 	void detail() throws Exception {
-		Manufacturer manufacturer = new Manufacturer(1l, "Ambev", "Brazil");
-		
-		when(repository.findById(1l)).thenReturn(Optional.of(manufacturer));
-		
-		RequestBuilder request = get("/manufacturers/" + manufacturer.getId())
+		RequestBuilder request = get("/manufacturers/1")
 				.contentType(MediaType.APPLICATION_JSON);
 		
 		mvc.perform(request)
-			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.name", is(manufacturer.getName())));  
+			.andExpect(status().isOk());  
         
 	}
 	
 	@Test
 	void detail_invalidManufacturer() throws Exception {
 		Long id = 999l;
-		
-		when(repository.findById(id)).thenReturn(Optional.empty());
-		
+	
 		RequestBuilder request = get("/manufacturers/" + id)
 				.contentType(MediaType.APPLICATION_JSON);
 		
@@ -142,12 +109,9 @@ public class ManufacturerControllerTest {
         
 	}
 	
-	@Test
+	@Test @WithUserDetails("user@beercat.com")
 	void update() throws Exception {
 		Manufacturer manufacturer = new Manufacturer(1l, "Ambev", "Brazil");
-		
-		when(repository.findById(1l)).thenReturn(Optional.of(manufacturer));
-		when(repository.save(manufacturer)).thenReturn(manufacturer);	
 		
 		RequestBuilder request = put("/manufacturers/" + manufacturer.getId())
 				.contentType(MediaType.APPLICATION_JSON)
@@ -155,16 +119,25 @@ public class ManufacturerControllerTest {
 		
 		mvc.perform(request)
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.name", is(manufacturer.getName())));  
-        
+			.andExpect(jsonPath("$.name", is(manufacturer.getName())));          
 	}
 	
-	@Test
+	@Test @WithUserDetails("user@erdinger.com")
+	void update_OtherManufacturer() throws Exception {
+		Manufacturer manufacturer = new Manufacturer(1l, "Ambev 2", "Chile");
+		
+		RequestBuilder request = put("/manufacturers/" + manufacturer.getId())
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(mapper.writeValueAsString(manufacturer));
+		
+		mvc.perform(request)
+			.andExpect(status().is4xxClientError());           
+	}
+	
+	@Test @WithUserDetails("user@beercat.com")
 	void update_invalidManufacturer() throws Exception {
 		Long id = 999l;
-		Manufacturer manufacturer = new Manufacturer(1l, "Heineken", "Netherlands");
-		
-		when(repository.findById(id)).thenReturn(Optional.empty());
+		Manufacturer manufacturer = new Manufacturer(id, "Heineken", "Netherlands");
 		
 		RequestBuilder request = put("/manufacturers/" + id)
 				.contentType(MediaType.APPLICATION_JSON)
@@ -175,13 +148,10 @@ public class ManufacturerControllerTest {
         
 	}
 	
-	@Test
+	@Test @WithUserDetails("user@beercat.com")
 	void remove() throws Exception {
-		Manufacturer manufacturer = new Manufacturer(1l, "Heineken", "Netherlands");
 		
-		when(repository.findById(1l)).thenReturn(Optional.of(manufacturer));
-		
-		RequestBuilder request = delete("/manufacturers/" + manufacturer.getId())
+		RequestBuilder request = delete("/manufacturers/3")
 				.contentType(MediaType.APPLICATION_JSON);
 		
 		mvc.perform(request)
@@ -189,16 +159,27 @@ public class ManufacturerControllerTest {
         
 	}
 	
-	@Test
+	@Test @WithUserDetails("user@beercat.com")
 	void remove_invalidManufacturer() throws Exception {
 		Long id = 999l;
-		when(repository.findById(id)).thenReturn(Optional.empty());
 		
 		RequestBuilder request = delete("/manufacturers/" + id)
 				.contentType(MediaType.APPLICATION_JSON);
 		
 		mvc.perform(request)
-			.andExpect(status().is4xxClientError());    
+			.andExpect(status().is4xxClientError());   
+        
+	}
+	
+	@Test @WithUserDetails("user@heineken.com")
+	void remove_selfManufacturer() throws Exception {
+		Long id = 1l;
+		
+		RequestBuilder request = delete("/manufacturers/" + id)
+				.contentType(MediaType.APPLICATION_JSON);
+		
+		mvc.perform(request)
+			.andExpect(status().is4xxClientError());   
         
 	}
 }

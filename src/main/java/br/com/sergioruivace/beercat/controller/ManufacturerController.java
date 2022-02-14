@@ -8,7 +8,10 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort.Direction;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -21,7 +24,10 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import br.com.sergioruivace.beercat.model.Manufacturer;
+import br.com.sergioruivace.beercat.model.User;
+import br.com.sergioruivace.beercat.repository.BeerRepository;
 import br.com.sergioruivace.beercat.repository.ManufacturerRepository;
+import br.com.sergioruivace.beercat.repository.UserRepository;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
@@ -33,19 +39,32 @@ public class ManufacturerController {
 	@Autowired
 	private ManufacturerRepository repository;
 	
+	@Autowired
+	private UserRepository userRepository;
+	
+	@Autowired
+	private BeerRepository beerRepository;
+	
 	@GetMapping
-	@Operation(description = "This API will return a manufacturer page. The sortDirection need to be ASC or DESC, sortField need to be a field from manufacturer")
+	@Operation(description = "This API will return a manufacturer page. The sortDirection need to be ASC or DESC, sortField need to be a field from manufacturer, search could be any field from manufacturer except id.")
 	public ResponseEntity<Page<Manufacturer>> list(@RequestParam(defaultValue = "0") int page, 
 			@RequestParam(defaultValue = "10") int size, 
 			@RequestParam(defaultValue = "name") String sortField, 
-			@RequestParam(defaultValue = "asc") String sortDirection) {
+			@RequestParam(defaultValue = "asc") String sortDirection,
+			@RequestParam(required = false) String search) {
 		try {
 			Direction direction = Direction.fromString(sortDirection);
 			
 			Pageable pageable = PageRequest.of(page, size, direction, sortField);
-			Page<Manufacturer> list = repository.findAll(pageable);
-			
-			return ResponseEntity.ok(list);	
+			Page<Manufacturer> list = null;
+			if(search != null && !search.isEmpty()) {
+				list = repository.findAll(search, pageable);	
+			}
+			else {
+				list = repository.findAll(pageable);
+			}				
+			return ResponseEntity.ok(list);
+
 		} catch (Exception e) {
 			return ResponseEntity.badRequest().build();
 		} 	
@@ -54,7 +73,12 @@ public class ManufacturerController {
 		
 	
 	@PostMapping
-	public ResponseEntity<Manufacturer> create(@RequestBody Manufacturer form, UriComponentsBuilder uriBuilder) {
+	public ResponseEntity<Manufacturer> create(@RequestBody Manufacturer form, UriComponentsBuilder uriBuilder, Authentication authentication) {
+		User user = (User) authentication.getPrincipal();
+		if(!user.canEdit(form)) {
+			return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+		}
+		
 		repository.save(form);
 		URI uri = uriBuilder.path("/manufacturers/{id}").buildAndExpand(form.getId()).toUri();
 		return ResponseEntity.created(uri).body(form);	
@@ -73,10 +97,15 @@ public class ManufacturerController {
 	}
 	
 	@PutMapping("/{id}")
-	public ResponseEntity<Manufacturer> update(@PathVariable Long id, @RequestBody Manufacturer form) {
+	public ResponseEntity<Manufacturer> update(@PathVariable Long id, @RequestBody Manufacturer form, Authentication authentication) {
+		User user = (User) authentication.getPrincipal();
+		
 		Optional<Manufacturer> optional = repository.findById(id);
 		if (optional.isPresent()) {
 			Manufacturer toUpdate = optional.get();
+			if(!user.canEdit(toUpdate)) {
+				return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+			}
 			toUpdate.update(form);
 			repository.save(toUpdate);
 			return ResponseEntity.ok(toUpdate);	
@@ -86,10 +115,18 @@ public class ManufacturerController {
 	}
 	
 	@DeleteMapping("/{id}")
-	public ResponseEntity<?> remove(@PathVariable Long id) {
+	@Transactional
+	public ResponseEntity<?> remove(@PathVariable Long id, Authentication authentication) {
+		User user = (User) authentication.getPrincipal();
+		
 		Optional<Manufacturer> optional = repository.findById(id);
 		if (optional.isPresent()) {
-			repository.deleteById(id);
+			if(!user.isAdmin()) {
+				return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+			}	
+			beerRepository.deleteByManufacturerId(id);
+			userRepository.deleteByManufacturerId(id);
+			repository.deleteById(id);			
 			return ResponseEntity.noContent().build();
 		}
 		return ResponseEntity.notFound().build();
